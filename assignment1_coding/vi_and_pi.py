@@ -174,6 +174,17 @@ def value_iteration(P, nS, nA, gamma=0.9, tol=1e-3):
 	############################
 	# YOUR IMPLEMENTATION HERE #
 
+	while True:
+		delta = 0.0
+		for s in range(0, nS):
+			v = value_function[s]
+			value_function[s] = max(bellman(P, s, a, value_function, gamma) for a in range(0, nA))
+			delta = max(delta, abs(v - value_function[s]))
+		if delta < tol:
+			break
+
+	policy = policy_improvement(P, nS, nA, value_function, policy, gamma)
+
 	############################
 	return value_function, policy
 
@@ -195,7 +206,7 @@ def render_single(env, policy, max_steps=100):
 	ob = env.reset()
 	for t in range(max_steps):
 		env.render()
-		time.sleep(0.25)
+		time.sleep(1)
 		a = policy[ob]
 		ob, rew, done, _ = env.step(a)
 		episode_reward += rew
