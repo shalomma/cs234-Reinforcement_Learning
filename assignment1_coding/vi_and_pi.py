@@ -34,7 +34,6 @@ the parameters P, nS, nA, gamma are defined as follows:
 
 
 def bellman(P, s, a, value_function, gamma):
-	probability, next_state, reward, _ = P[s][a]
 	return sum([
 		probability * (reward + gamma * value_function[next_state])
 		for (probability, next_state, reward, _) in P[s][a]
