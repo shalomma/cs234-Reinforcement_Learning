@@ -33,6 +33,14 @@ the parameters P, nS, nA, gamma are defined as follows:
 """
 
 
+def bellman(P, s, a, value_function, gamma):
+	probability, next_state, reward, _ = P[s][a]
+	return sum([
+		probability * (reward + gamma * value_function[next_state])
+		for (probability, next_state, reward, _) in P[s][a]
+	])
+
+
 def policy_evaluation(P, nS, nA, policy, gamma=0.9, tol=1e-3):
 	"""
 	Evaluate the value function from a given policy.
@@ -57,6 +65,15 @@ def policy_evaluation(P, nS, nA, policy, gamma=0.9, tol=1e-3):
 
 	############################
 	# YOUR IMPLEMENTATION HERE #
+
+	while True:
+		delta = 0.0
+		for s in range(0, nS):
+			v, a = value_function[s], policy[s]
+			value_function[s] = bellman(P, s, a, value_function, gamma)
+			delta = max(delta, abs(v - value_function[s]))
+		if delta < tol:
+			break
 
 	############################
 	return value_function
@@ -87,26 +104,35 @@ def policy_improvement(P, nS, nA, value_from_policy, policy, gamma=0.9):
 	############################
 	# YOUR IMPLEMENTATION HERE #
 
+	for s in range(0, nS):
+		pis = []
+		for a in range(0, nA):
+			pis.append(
+				bellman(P, s, a, value_from_policy, gamma)
+			)
+		new_policy[s] = int(np.argmax(pis))
+
 	############################
 	return new_policy
 
 
 def policy_iteration(P, nS, nA, gamma=0.9, tol=10e-3):
-	"""Runs policy iteration.
+	"""
+	Runs policy iteration.
 
 	You should call the policy_evaluation() and policy_improvement() methods to
 	implement this method.
 
 	Parameters
 	----------
-	P, nS, nA, gamma:
-		defined at beginning of file
-	tol: float
-		tol parameter used in policy_evaluation()
-	Returns:
+		P, nS, nA, gamma:
+			defined at beginning of file
+		tol: float
+			tol parameter used in policy_evaluation()
+	Returns
 	----------
-	value_function: np.ndarray[nS]
-	policy: np.ndarray[nS]
+		value_function: np.ndarray[nS]
+		policy: np.ndarray[nS]
 	"""
 
 	value_function = np.zeros(nS)
@@ -126,15 +152,15 @@ def value_iteration(P, nS, nA, gamma=0.9, tol=1e-3):
 
 	Parameters:
 	----------
-	P, nS, nA, gamma:
-		defined at beginning of file
-	tol: float
-		Terminate value iteration when
-			max |value_function(s) - prev_value_function(s)| < tol
-	Returns:
+		P, nS, nA, gamma:
+			defined at beginning of file
+		tol: float
+			Terminate value iteration when
+				max |value_function(s) - prev_value_function(s)| < tol
+	Returns
 	----------
-	value_function: np.ndarray[nS]
-	policy: np.ndarray[nS]
+		value_function: np.ndarray[nS]
+		policy: np.ndarray[nS]
 	"""
 
 	value_function = np.zeros(nS)
