@@ -141,6 +141,13 @@ def policy_iteration(P, nS, nA, gamma=0.9, tol=10e-3):
 	############################
 	# YOUR IMPLEMENTATION HERE #
 
+	while True:
+		value_function = policy_evaluation(P, nS, nA, policy, gamma, tol)
+		new_policy = policy_improvement(P, nS, nA, value_function, policy, gamma)
+		if all(new_policy == policy):
+			break
+		policy = new_policy
+
 	############################
 	return value_function, policy
 
