@@ -3,17 +3,17 @@ from utils.test_env import EnvTest
 
 
 class LinearSchedule(object):
-    def __init__(self, eps_begin, eps_end, nsteps):
+    def __init__(self, eps_begin, eps_end, n_steps):
         """
         Args:
             eps_begin: initial exploration
             eps_end: end exploration
-            nsteps: number of steps between the two values of eps
+            n_steps: number of steps between the two values of eps
         """
         self.epsilon = eps_begin
         self.eps_begin = eps_begin
         self.eps_end = eps_end
-        self.nsteps = nsteps
+        self.n_steps = n_steps
 
     def update(self, t):
         """
@@ -27,18 +27,16 @@ class LinearSchedule(object):
         """
         TODO: modify self.epsilon such that
             it is a linear interpolation from self.eps_begin to
-            self.eps_end as t goes from 0 to self.nsteps
-            For t > self.nsteps self.epsilon remains constant
+            self.eps_end as t goes from 0 to self.n_steps
+            For t > self.n_steps self.epsilon remains constant
         """
         ##############################################################
-        ################ YOUR CODE HERE - 3-4 lines ##################
-
-        ##############################################################
-        ######################## END YOUR CODE ############## ########
+        t_steps = t if t < self.n_steps else self.n_steps
+        self.epsilon = self.eps_begin + t_steps * (self.eps_end - self.eps_begin) / self.n_steps
 
 
 class LinearExploration(LinearSchedule):
-    def __init__(self, env, eps_begin, eps_end, nsteps):
+    def __init__(self, env, eps_begin, eps_end, n_steps):
         """
         Args:
             env: gym environment
@@ -46,11 +44,11 @@ class LinearExploration(LinearSchedule):
                 initial exploration rate
             eps_end: float
                 final exploration rate
-            nsteps: int
+            n_steps: int
                 number of steps taken to linearly decay eps_begin to eps_end
         """
         self.env = env
-        super(LinearExploration, self).__init__(eps_begin, eps_end, nsteps)
+        super(LinearExploration, self).__init__(eps_begin, eps_end, n_steps)
 
     def get_action(self, best_action):
         """
@@ -73,19 +71,17 @@ class LinearExploration(LinearSchedule):
                 a random action
         """
         ##############################################################
-        ################ YOUR CODE HERE - 4-5 lines ##################
 
-        ##############################################################
-        ######################## END YOUR CODE #######################
+        return best_action if np.random.rand(1) > self.epsilon else self.env.action_space.sample()
 
 
 def test1():
     env = EnvTest((5, 5, 1))
-    exp_strat = LinearExploration(env, 1, 0, 10)
+    exp_start = LinearExploration(env, 1, 0, 10)
 
     found_diff = False
     for i in range(10):
-        rnd_act = exp_strat.get_action(0)
+        rnd_act = exp_start.get_action(0)
         if rnd_act != 0 and rnd_act is not None:
             found_diff = True
 
@@ -95,17 +91,17 @@ def test1():
 
 def test2():
     env = EnvTest((5, 5, 1))
-    exp_strat = LinearExploration(env, 1, 0, 10)
-    exp_strat.update(5)
-    assert exp_strat.epsilon == 0.5, "Test 2 failed"
+    exp_start = LinearExploration(env, 1, 0, 10)
+    exp_start.update(5)
+    assert exp_start.epsilon == 0.5, "Test 2 failed"
     print("Test2: ok")
 
 
 def test3():
     env = EnvTest((5, 5, 1))
-    exp_strat = LinearExploration(env, 1, 0.5, 10)
-    exp_strat.update(20)
-    assert exp_strat.epsilon == 0.5, "Test 3 failed"
+    exp_start = LinearExploration(env, 1, 0.5, 10)
+    exp_start.update(20)
+    assert exp_start.epsilon == 0.5, "Test 3 failed"
     print("Test3: ok")
 
 
