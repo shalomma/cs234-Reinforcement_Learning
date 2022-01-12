@@ -4,10 +4,11 @@ import torch.nn as nn
 
 from typing import Tuple
 from pathlib import Path
-from torch.tensor import Tensor
+from torch import Tensor
 from torch.optim import Optimizer
 from torch.utils.tensorboard import SummaryWriter
 from core.q_learning import QN
+
 
 class DQN(QN):
 
@@ -23,10 +24,10 @@ class DQN(QN):
     """
     Abstract class for Deep Q Learning
     """
+
     def initialize_models(self):
         """ Define the modules needed for the module to work."""
         raise NotImplementedError
-
 
     def get_q_values(self, state: Tensor, network: str) -> Tensor:
         """
@@ -37,7 +38,6 @@ class DQN(QN):
             output: A tensor of shape (batch_size, num_actions)
         """
         raise NotImplementedError
-
 
     def update_target(self) -> None:
         """
@@ -51,14 +51,12 @@ class DQN(QN):
         """
         raise NotImplementedError
 
-
-    def calc_loss(self, q_values : Tensor, target_q_values : Tensor, 
-                    actions : Tensor, rewards: Tensor, done_mask: Tensor) -> Tensor:
+    def calc_loss(self, q_values: Tensor, target_q_values: Tensor,
+                  actions: Tensor, rewards: Tensor, done_mask: Tensor) -> Tensor:
         """
         Set (Q_target - Q)^2
         """
         raise NotImplementedError
-
 
     def add_optimizer(self) -> Optimizer:
         """
@@ -66,8 +64,7 @@ class DQN(QN):
         """
         raise NotImplementedError
 
-
-    def process_state(self, state : Tensor) -> Tensor:
+    def process_state(self, state: Tensor) -> Tensor:
         """
         Processing of state
 
@@ -84,7 +81,6 @@ class DQN(QN):
 
         return state
 
-
     def build(self):
         """
         Build model by adding all necessary variables
@@ -98,16 +94,17 @@ class DQN(QN):
             print('Load successful!')
         else:
             print('Initializing parameters randomly')
+
             def init_weights(m):
                 if hasattr(m, 'weight'):
                     nn.init.xavier_uniform_(m.weight, gain=2 ** (1. / 2))
                 if hasattr(m, 'bias'):
                     nn.init.zeros_(m.bias)
+
             self.q_network.apply(init_weights)
         self.q_network = self.q_network.to(self.device)
         self.target_network = self.target_network.to(self.device)
         self.add_optimizer()
-
 
     def initialize(self):
         """
@@ -119,7 +116,6 @@ class DQN(QN):
             'WARNING: Networks not initialized. Check initialize_models'
         self.update_target()
 
-       
     def add_summary(self, latest_loss, latest_total_norm, t):
         """
         Tensorboard stuff
@@ -134,7 +130,6 @@ class DQN(QN):
         self.summary_writer.add_scalar('Std_Q', self.std_q, t)
         self.summary_writer.add_scalar('Eval_Reward', self.eval_reward, t)
 
-
     def save(self):
         """
         Saves session
@@ -143,7 +138,6 @@ class DQN(QN):
         #     os.makedirs(self.config.model_output)
         torch.save(self.q_network.state_dict(), self.config.model_output)
         # self.saver.save(self.sess, self.config.model_output)
-
 
     def get_best_action(self, state: Tensor) -> Tuple[int, np.ndarray]:
         """
@@ -162,7 +156,6 @@ class DQN(QN):
         action = np.argmax(action_values)
         return action, action_values
 
-
     def update_step(self, t, replay_buffer, lr):
         """
         Performs an update of parameters by sampling from replay_buffer
@@ -178,7 +171,7 @@ class DQN(QN):
         s_batch, a_batch, r_batch, sp_batch, done_mask_batch = replay_buffer.sample(
             self.config.batch_size)
         self.timer.end('update_step/replay_buffer.sample')
-        
+
         assert self.q_network is not None and self.target_network is not None, \
             'WARNING: Networks not initialized. Check initialize_models'
         assert self.optimizer is not None, \
@@ -211,8 +204,8 @@ class DQN(QN):
         self.timer.end('update_step/forward_pass_target')
 
         self.timer.start('update_step/loss_calc')
-        loss = self.calc_loss(q_values, target_q_values, 
-            a_batch, r_batch, done_mask_batch)
+        loss = self.calc_loss(q_values, target_q_values,
+                              a_batch, r_batch, done_mask_batch)
         self.timer.end('update_step/loss_calc')
         self.timer.start('update_step/loss_backward')
         loss.backward()
@@ -231,10 +224,8 @@ class DQN(QN):
         self.timer.end('update_step/optimizer')
         return loss.item(), total_norm.item()
 
-
     def update_target_params(self):
         """
         Update parametes of Q' with parameters of Q
         """
         self.update_target()
-

@@ -11,25 +11,25 @@ from utils.replay_buffer import ReplayBuffer
 from utils.preprocess import greyscale
 from utils.wrappers import PreproWrapper, MaxAndSkipEnv
 
-class Timer():
+
+class Timer:
 
     def __init__(self, enabled=False) -> None:
         super().__init__()
         self.enabled = enabled
-        self.category_sec_avg = defaultdict(lambda : [0., 0., 0]) # A bucket of [total_secs, latest_start, num_calls]
+        self.category_sec_avg = defaultdict(lambda: [0., 0., 0])  # A bucket of [total_secs, latest_start, num_calls]
 
     def start(self, category):
         if self.enabled:
             stat = self.category_sec_avg[category]
             stat[1] = time.perf_counter()
             stat[2] += 1
-        
 
     def end(self, category):
         if self.enabled:
             stat = self.category_sec_avg[category]
             stat[0] += time.perf_counter() - stat[1]
-    
+
     def print_stat(self):
         if self.enabled:
             print('Printing timer stats:')
@@ -48,6 +48,7 @@ class QN(object):
     """
     Abstract Class for implementing a Q Network
     """
+
     def __init__(self, env, config, logger=None):
         """
         Initialize Q Network and env
@@ -59,7 +60,7 @@ class QN(object):
         # directory for training outputs
         if not os.path.exists(config.output_path):
             os.makedirs(config.output_path)
-            
+
         # store hyper params
         self.config = config
         self.logger = logger
@@ -71,13 +72,11 @@ class QN(object):
         # build model
         self.build()
 
-
     def build(self):
         """
         Build model
         """
         pass
-
 
     @property
     def policy(self):
@@ -85,7 +84,6 @@ class QN(object):
         model.policy(state) = action
         """
         return lambda state: self.get_action(state)
-
 
     def save(self):
         """
@@ -96,13 +94,11 @@ class QN(object):
         """
         pass
 
-
     def initialize(self):
         """
         Initialize variables if necessary
         """
         pass
-
 
     def get_best_action(self, state):
         """
@@ -114,7 +110,6 @@ class QN(object):
             tuple: action, q values
         """
         raise NotImplementedError
-
 
     def get_action(self, state):
         """
@@ -128,13 +123,11 @@ class QN(object):
         else:
             return self.get_best_action(state)[0]
 
-
     def update_target_params(self):
         """
         Update params of Q' with params of Q
         """
         pass
-
 
     def init_averages(self):
         """
@@ -147,9 +140,8 @@ class QN(object):
         self.avg_q = 0
         self.max_q = 0
         self.std_q = 0
-        
-        self.eval_reward = -21.
 
+        self.eval_reward = -21.
 
     def update_averages(self, rewards, max_q_values, q_values, scores_eval):
         """
@@ -165,9 +157,9 @@ class QN(object):
         self.max_reward = np.max(rewards)
         self.std_reward = np.sqrt(np.var(rewards) / len(rewards))
 
-        self.max_q      = np.mean(max_q_values)
-        self.avg_q      = np.mean(q_values)
-        self.std_q      = np.sqrt(np.var(q_values) / len(q_values))
+        self.max_q = np.mean(max_q_values)
+        self.avg_q = np.mean(q_values)
+        self.std_q = np.sqrt(np.var(q_values) / len(q_values))
 
         if len(scores_eval) > 0:
             self.eval_reward = scores_eval[-1]
@@ -192,10 +184,10 @@ class QN(object):
         q_values = deque(maxlen=1000)
         self.init_averages()
 
-        t = last_eval = last_record = 0 # time control of nb of steps
-        scores_eval = [] # list of scores computed at iteration time
+        t = last_eval = last_record = 0  # time control of nb of steps
+        scores_eval = []  # list of scores computed at iteration time
         scores_eval += [self.evaluate()]
-        
+
         prog = Progbar(target=self.config.nsteps_train)
 
         # interact with environment
@@ -211,14 +203,14 @@ class QN(object):
                 if self.config.render_train: self.env.render()
                 # replay memory stuff
                 self.timer.start('replay_buffer.store_encode')
-                idx      = replay_buffer.store_frame(state)
+                idx = replay_buffer.store_frame(state)
                 q_input = replay_buffer.encode_recent_observation()
                 self.timer.end('replay_buffer.store_encode')
 
                 # chose action according to current Q and exploration
                 self.timer.start('get_action')
                 best_action, q_vals = self.get_best_action(q_input)
-                action                = exp_schedule.get_action(best_action)
+                action = exp_schedule.get_action(best_action)
                 self.timer.end('get_action')
 
                 # store q values
@@ -243,21 +235,21 @@ class QN(object):
 
                 # logging stuff
                 if ((t > self.config.learning_start) and (t % self.config.log_freq == 0) and
-                   (t % self.config.learning_freq == 0)):
+                        (t % self.config.learning_freq == 0)):
                     self.timer.start('logging')
                     self.update_averages(rewards, max_q_values, q_values, scores_eval)
                     self.add_summary(loss_eval, grad_eval, t)
                     exp_schedule.update(t)
                     lr_schedule.update(t)
                     if len(rewards) > 0:
-                        prog.update(t + 1, exact=[("Loss", loss_eval), ("Avg_R", self.avg_reward), 
-                                        ("Max_R", np.max(rewards)), ("eps", exp_schedule.epsilon), 
-                                        ("Grads", grad_eval), ("Max_Q", self.max_q), 
-                                        ("lr", lr_schedule.epsilon)], base=self.config.learning_start)
+                        prog.update(t + 1, exact=[("Loss", loss_eval), ("Avg_R", self.avg_reward),
+                                                  ("Max_R", np.max(rewards)), ("eps", exp_schedule.epsilon),
+                                                  ("Grads", grad_eval), ("Max_Q", self.max_q),
+                                                  ("lr", lr_schedule.epsilon)], base=self.config.learning_start)
                     self.timer.end('logging')
                 elif (t < self.config.learning_start) and (t % self.config.log_freq == 0):
-                    sys.stdout.write("\rPopulating the memory {}/{}...".format(t, 
-                                                        self.config.learning_start))
+                    sys.stdout.write("\rPopulating the memory {}/{}...".format(t,
+                                                                               self.config.learning_start))
                     sys.stdout.flush()
                     prog.reset_start()
 
@@ -267,7 +259,7 @@ class QN(object):
                     break
 
             # updates to perform at the end of an episode
-            rewards.append(total_reward)          
+            rewards.append(total_reward)
 
             if (t > self.config.learning_start) and (last_eval > self.config.eval_freq):
                 # evaluate our policy
@@ -281,7 +273,7 @@ class QN(object):
 
             if (t > self.config.learning_start) and self.config.record and (last_record > self.config.record_freq):
                 self.logger.info("Recording...")
-                last_record =0
+                last_record = 0
                 self.timer.start('recording')
                 self.record()
                 self.timer.end('recording')
@@ -291,7 +283,6 @@ class QN(object):
         self.save()
         scores_eval += [self.evaluate()]
         export_plot(scores_eval, "Scores", self.config.plot_output)
-
 
     def train_step(self, t, replay_buffer, lr):
         """
@@ -315,7 +306,7 @@ class QN(object):
             self.timer.start('train_step/update_param')
             self.update_target_params()
             self.timer.end('train_step/update_param')
-            
+
         # occasionaly save the weights
         if (t % self.config.saving_freq == 0):
             self.timer.start('train_step/save')
@@ -323,7 +314,6 @@ class QN(object):
             self.timer.end('train_step/save')
 
         return loss_eval, grad_eval
-
 
     def evaluate(self, env=None, num_episodes=None):
         """
@@ -351,7 +341,7 @@ class QN(object):
                 if self.config.render_test: env.render()
 
                 # store last state in buffer
-                idx     = replay_buffer.store_frame(state)
+                idx = replay_buffer.store_frame(state)
                 q_input = replay_buffer.encode_recent_observation()
 
                 action = self.get_action(q_input)
@@ -369,7 +359,7 @@ class QN(object):
                     break
 
             # updates to perform at the end of an episode
-            rewards.append(total_reward)     
+            rewards.append(total_reward)
 
         avg_reward = np.mean(rewards)
         sigma_reward = np.sqrt(np.var(rewards) / len(rewards))
@@ -380,7 +370,6 @@ class QN(object):
 
         return avg_reward
 
-
     def record(self):
         """
         Re create an env and record a video for one episode
@@ -388,10 +377,9 @@ class QN(object):
         env = gym.make(self.config.env_name)
         env = gym.wrappers.Monitor(env, self.config.record_path, video_callable=lambda x: True, resume=True)
         env = MaxAndSkipEnv(env, skip=self.config.skip_frame)
-        env = PreproWrapper(env, prepro=greyscale, shape=(80, 80, 1), 
-                        overwrite_render=self.config.overwrite_render)
+        env = PreproWrapper(env, prepro=greyscale, shape=(80, 80, 1),
+                            overwrite_render=self.config.overwrite_render)
         self.evaluate(env, 1)
-
 
     def run(self, exp_schedule, lr_schedule):
         """
@@ -414,4 +402,3 @@ class QN(object):
         # record one game at the end
         if self.config.record:
             self.record()
-        
