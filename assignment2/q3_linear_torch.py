@@ -2,20 +2,22 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torch.tensor import Tensor
+from torch import Tensor
 from utils.test_env import EnvTest
 from core.deep_q_learning_torch import DQN
 from q2_schedule import LinearExploration, LinearSchedule
 
-from configs.q3_linear import config
+from configs.q3_linear import Config
 
 
 class Linear(DQN):
     """
     Implement Fully Connected with Tensorflow
     """
+
     def initialize_models(self):
-        """Creates the 2 separate networks (Q network and Target network). The input
+        """
+        Creates the 2 separate networks (Q network and Target network). The input
         to these models will be an img_height * img_width image
         with channels = n_channels * self.config.state_history
 
@@ -33,11 +35,13 @@ class Linear(DQN):
         num_actions = self.env.action_space.n
 
         ##############################################################
-        ################ YOUR CODE HERE (2 lines) ##################
+
+        self.q_network = \
+            torch.nn.Sequential(nn.Linear(img_height * img_width * n_channels * self.config.state_history, num_actions))
+        self.target_network = \
+            torch.nn.Sequential(nn.Linear(img_height * img_width * n_channels * self.config.state_history, num_actions))
 
         ##############################################################
-        ######################## END YOUR CODE #######################
-
 
     def get_q_values(self, state, network='q_network'):
         """
@@ -59,13 +63,14 @@ class Linear(DQN):
         out = None
 
         ##############################################################
-        ################ YOUR CODE HERE - 3-5 lines ##################
+
+        assert network in ['q_network', 'target_network'], 'unknown network input'
+        inputs = torch.flatten(state, start_dim=1)
+        out = self.q_network(inputs) if network == 'q_network' else self.target_network(inputs)
 
         ##############################################################
-        ######################## END YOUR CODE #######################
 
         return out
-
 
     def update_target(self):
         """
@@ -83,14 +88,13 @@ class Linear(DQN):
         """
 
         ##############################################################
-        ################### YOUR CODE HERE - 1-2 lines ###############
+
+        self.target_network.load_state_dict(self.q_network.state_dict())
 
         ##############################################################
-        ######################## END YOUR CODE #######################
 
-
-    def calc_loss(self, q_values : Tensor, target_q_values : Tensor,
-                    actions : Tensor, rewards: Tensor, done_mask: Tensor) -> Tensor:
+    def calc_loss(self, q_values: Tensor, target_q_values: Tensor,
+                  actions: Tensor, rewards: Tensor, done_mask: Tensor) -> Tensor:
         """
         Calculate the MSE loss of this step.
         The loss for an example is defined as:
@@ -103,7 +107,8 @@ class Linear(DQN):
                 The Q-values that your current network estimates (i.e. Q(s, a') for all a')
             target_q_values: (torch tensor) shape = (batch_size, num_actions)
                 The Target Q-values that your target network estimates (i.e. (i.e. Q_target(s', a') for all a')
-            actions: (torch tensor) shape = (batch_size,)
+
+            : (torch tensor) shape = (batch_size,)
                 The actions that you actually took at each step (i.e. a)
             rewards: (torch tensor) shape = (batch_size,)
                 The rewards that you actually got at each step (i.e. r)
@@ -122,11 +127,11 @@ class Linear(DQN):
         gamma = self.config.gamma
 
         ##############################################################
-        ##################### YOUR CODE HERE - 3-5 lines #############
-
+        Q_samp = rewards + gamma * target_q_values.max(dim=1).values
+        Q_samp[done_mask] = rewards[done_mask]
+        Q = torch.gather(q_values, dim=1, index=actions.type(torch.int64).unsqueeze(-1))
+        return F.mse_loss(Q, Q_samp)
         ##############################################################
-        ######################## END YOUR CODE #######################
-
 
     def add_optimizer(self):
         """
@@ -138,24 +143,21 @@ class Linear(DQN):
             - What are the input to the optimizer's constructor?
         """
         ##############################################################
-        #################### YOUR CODE HERE - 1 line #############
-
+        self.optimizer = torch.optim.SGD(self.q_network.parameters(), lr=0.01, momentum=0.9)
         ##############################################################
-        ######################## END YOUR CODE #######################
-
 
 
 if __name__ == '__main__':
     env = EnvTest((5, 5, 1))
 
     # exploration strategy
-    exp_schedule = LinearExploration(env, config.eps_begin,
-            config.eps_end, config.eps_nsteps)
+    exp_schedule = LinearExploration(env, Config.eps_begin,
+                                     Config.eps_end, Config.eps_nsteps)
 
     # learning rate schedule
-    lr_schedule  = LinearSchedule(config.lr_begin, config.lr_end,
-            config.lr_nsteps)
+    lr_schedule = LinearSchedule(Config.lr_begin, Config.lr_end,
+                                 Config.lr_nsteps)
 
     # train model
-    model = Linear(env, config)
+    model = Linear(env, Config)
     model.run(exp_schedule, lr_schedule)
