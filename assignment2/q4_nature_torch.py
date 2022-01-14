@@ -1,14 +1,47 @@
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-from utils.general import get_logger
 from utils.test_env import EnvTest
 from q2_schedule import LinearExploration, LinearSchedule
 from q3_linear_torch import Linear
 
-
 from configs.q4_nature import config
+
+
+class ModelDQN(nn.Module):
+    def __init__(self, input_size, state_history, n_channels, num_actions):
+        super(ModelDQN, self).__init__()
+        modules = []
+        pad = self.padding_size(input_size, 8, 4)
+        modules.append(nn.Conv2d(n_channels * state_history, 32, kernel_size=(8, 8), stride=(4, 4), padding=pad))
+        modules.append(nn.ReLU())
+        out_size = self.output_size(input_size, kernel_size=8, stride=4, pad=pad, dilation=1)
+
+        pad = self.padding_size(input_size, 4, 2)
+        modules.append(nn.Conv2d(32, 64, kernel_size=(4, 4), stride=(2, 2), padding=pad))
+        modules.append(nn.ReLU())
+        out_size = self.output_size(out_size, kernel_size=4, stride=2, pad=pad, dilation=1)
+
+        pad = self.padding_size(input_size, 3, 1)
+        modules.append(nn.Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=pad))
+        modules.append(nn.ReLU())
+        out_size = self.output_size(out_size, kernel_size=3, stride=1, pad=1, dilation=1)
+
+        modules.append(nn.Flatten())
+        modules.append(nn.Linear(out_size * out_size * 64, num_actions))
+        self.network = nn.ModuleList(modules)
+
+    @staticmethod
+    def padding_size(input_size, kernel_size, stride):
+        return ((stride - 1) * input_size - stride + kernel_size) // 2
+
+    @staticmethod
+    def output_size(input_size, kernel_size=1, stride=1, pad=0, dilation=1):
+        return ((input_size + (2 * pad) - (dilation * (kernel_size - 1)) - 1) // stride) + 1
+
+    def forward(self, x):
+        for layer in self.network:
+            x = layer(x)
+        return x
 
 
 class NatureQN(Linear):
@@ -20,7 +53,8 @@ class NatureQN(Linear):
     """
 
     def initialize_models(self):
-        """Creates the 2 separate networks (Q network and Target network). The input
+        """
+        Creates the 2 separate networks (Q network and Target network). The input
         to these models will be an img_height * img_width image
         with channels = n_channels * self.config.state_history
 
@@ -45,12 +79,11 @@ class NatureQN(Linear):
         num_actions = self.env.action_space.n
 
         ##############################################################
-        ################ YOUR CODE HERE - 25-30 lines lines ################
-
+        self.q_network = ModelDQN(img_height, self.config.state_history, n_channels, num_actions)
+        self.target_network = ModelDQN(img_height, self.config.state_history, n_channels, num_actions)
         ##############################################################
-        ######################## END YOUR CODE #######################
 
-    def get_q_values(self, state, network):
+    def get_q_values(self, state, network='q_network'):
         """
         Returns Q values for all actions
 
@@ -67,13 +100,11 @@ class NatureQN(Linear):
             1. What are the input shapes to the network as compared to the "state" argument?
             2. You can forward a tensor through a network by simply calling it (i.e. network(tensor))
         """
-        out = None
 
         ##############################################################
-        ################ YOUR CODE HERE - 4-5 lines lines ################
-
+        state = state.permute(0, 3, 1, 2)
+        out = self.q_network(state) if network == 'q_network' else self.target_network(state)
         ##############################################################
-        ######################## END YOUR CODE #######################
         return out
 
 
@@ -85,11 +116,11 @@ if __name__ == '__main__':
 
     # exploration strategy
     exp_schedule = LinearExploration(env, config.eps_begin,
-            config.eps_end, config.eps_nsteps)
+                                     config.eps_end, config.eps_nsteps)
 
     # learning rate schedule
-    lr_schedule  = LinearSchedule(config.lr_begin, config.lr_end,
-            config.lr_nsteps)
+    lr_schedule = LinearSchedule(config.lr_begin, config.lr_end,
+                                 config.lr_nsteps)
 
     # train model
     model = NatureQN(env, config)
