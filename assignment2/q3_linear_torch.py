@@ -143,7 +143,7 @@ class Linear(DQN):
             - What are the input to the optimizer's constructor?
         """
         ##############################################################
-        self.optimizer = torch.optim.SGD(self.q_network.parameters(), lr=0.01, momentum=0.9)
+        self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=0.01)
         ##############################################################
 
 
