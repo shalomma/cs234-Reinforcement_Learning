@@ -129,7 +129,7 @@ class Linear(DQN):
         ##############################################################
         Q_samp = rewards + gamma * target_q_values.max(dim=1).values
         Q_samp[done_mask] = rewards[done_mask]
-        Q = torch.gather(q_values, dim=1, index=actions.type(torch.int64).unsqueeze(-1))
+        Q = torch.sum(q_values * F.one_hot(actions.to(torch.int64), num_classes=num_actions), dim=1)
         return F.mse_loss(Q, Q_samp)
         ##############################################################
 
@@ -143,7 +143,7 @@ class Linear(DQN):
             - What are the input to the optimizer's constructor?
         """
         ##############################################################
-        self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=0.01)
+        self.optimizer = torch.optim.Adam(self.q_network.parameters())
         ##############################################################
 
 
