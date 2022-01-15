@@ -11,6 +11,7 @@ https://docs.conda.io/projects/continuumio-conda/en/latest/user-guide/install/in
 ### Pong-v0
 
 ```
+pip install -r requirements.txt
 pip install "gym[atari,accept-rom-license]"
 ```
 
