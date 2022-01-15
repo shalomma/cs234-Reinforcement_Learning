@@ -282,7 +282,7 @@ class QN(object):
         self.logger.info("- Training done.")
         self.save()
         scores_eval += [self.evaluate()]
-        export_plot(scores_eval, "Scores", self.config.plot_output)
+        # export_plot(scores_eval, "Scores", self.config.plot_output)
 
     def train_step(self, t, replay_buffer, lr):
         """

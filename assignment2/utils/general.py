@@ -19,7 +19,7 @@ def export_plot(ys, ylabel, filename):
     plt.plot(range(len(ys)), ys)
     plt.xlabel("Epoch")
     plt.ylabel(ylabel)
-    # plt.savefig(filename)
+    plt.savefig(filename)
     plt.close()
 
 
