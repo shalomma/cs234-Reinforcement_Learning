@@ -40,16 +40,6 @@ if __name__ == '__main__':
     lr_schedule = LinearSchedule(config.lr_begin, config.lr_end,
                                  config.lr_nsteps)
 
-    # Check weights
-    if hasattr(config, 'load_path'):
-        load_path = Path(config.load_path)
-        if load_path.is_file():
-            print(f'File {load_path} exists, skipping download')
-    else:
-        print(f'Downloading weights...')
-        subprocess.call(["wget", "-P", "weights/", "http://web.stanford.edu/~haojun/model.weights_step=2000000"])
-        print(f'Finished downloading weights')
-
     # train model
     model = NatureQN(env, config)
     model.run(exp_schedule, lr_schedule)
