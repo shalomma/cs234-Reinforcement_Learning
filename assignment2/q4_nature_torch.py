@@ -27,7 +27,9 @@ class ModelDQN(nn.Module):
         out_size = self.output_size(out_size, kernel_size=3, stride=1, pad=1, dilation=1)
 
         modules.append(nn.Flatten())
-        modules.append(nn.Linear(out_size * out_size * 64, num_actions))
+        modules.append(nn.Linear(out_size * out_size * 64, 512))
+        modules.append(nn.ReLU())
+        modules.append(nn.Linear(512, num_actions))
         self.network = nn.ModuleList(modules)
 
     @staticmethod
