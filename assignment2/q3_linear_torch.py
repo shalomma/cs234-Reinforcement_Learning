@@ -49,7 +49,7 @@ class Linear(DQN):
 
         Args:
             state: (torch tensor)
-                shape = (batch_size, img height, img width, nchannels x config.state_history)
+                shape = (batch_size, img height, img width, n_channels x config.state_history)
             network: (str)
                 The name of the network, either "q_network" or "target_network"
 
@@ -60,7 +60,6 @@ class Linear(DQN):
             1. Look up torch.flatten
             2. You can forward a tensor through a network by simply calling it (i.e. network(tensor))
         """
-        out = None
 
         ##############################################################
 
@@ -107,8 +106,7 @@ class Linear(DQN):
                 The Q-values that your current network estimates (i.e. Q(s, a') for all a')
             target_q_values: (torch tensor) shape = (batch_size, num_actions)
                 The Target Q-values that your target network estimates (i.e. (i.e. Q_target(s', a') for all a')
-
-            : (torch tensor) shape = (batch_size,)
+            actions: (torch tensor) shape = (batch_size,)
                 The actions that you actually took at each step (i.e. a)
             rewards: (torch tensor) shape = (batch_size,)
                 The rewards that you actually got at each step (i.e. r)
@@ -140,7 +138,7 @@ class Linear(DQN):
 
         Hint:
             - Look up torch.optim.Adam
-            - What are the input to the optimizer's constructor?
+            - What are the input to the optimizers constructor?
         """
         ##############################################################
         self.optimizer = torch.optim.Adam(self.q_network.parameters())
