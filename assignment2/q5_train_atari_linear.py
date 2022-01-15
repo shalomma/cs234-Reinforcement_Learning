@@ -34,11 +34,11 @@ if __name__ == '__main__':
 
     # exploration strategy
     exp_schedule = LinearExploration(env, config.eps_begin,
-            config.eps_end, config.eps_nsteps)
+                                     config.eps_end, config.eps_nsteps)
 
     # learning rate schedule
-    lr_schedule  = LinearSchedule(config.lr_begin, config.lr_end,
-            config.lr_nsteps)
+    lr_schedule = LinearSchedule(config.lr_begin, config.lr_end,
+                                 config.lr_nsteps)
 
     # train model
     model = Linear(env, config)
