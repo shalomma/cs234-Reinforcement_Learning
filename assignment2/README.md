@@ -10,6 +10,10 @@ https://docs.conda.io/projects/continuumio-conda/en/latest/user-guide/install/in
 
 ### Pong-v0
 
+```
+pip install "gym[atari,accept-rom-license]"
+```
+
 - We play against a decent AI player.
 - One player wins if the ball pass through the other player and gets reward +1 else -1.
 - Episode is over when one of the player reaches 21 wins
