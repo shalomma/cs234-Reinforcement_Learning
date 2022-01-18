@@ -25,10 +25,12 @@ def build_mlp(
     "nn.Linear" and "nn.Sequential" may be helpful.
     """
     #######################################################
-    #########   YOUR CODE HERE - 7-15 lines.   ############
-
+    modules = []
+    modules += [nn.Linear(input_size, size), nn.ReLU()]
+    modules += [nn.Sequential(nn.Linear(size, size), nn.ReLU()) for _ in range(n_layers)]
+    modules.append(nn.Linear(size, output_size))
+    return nn.Sequential(*modules)
     #######################################################
-    #########          END YOUR CODE.          ############
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
