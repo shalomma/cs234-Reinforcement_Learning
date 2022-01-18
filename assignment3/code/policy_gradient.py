@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 import torch
 import gym
@@ -25,6 +26,10 @@ class PolicyGradient(object):
         you will need to use self.discrete, self.observation_dim,
         self.action_dim, and self.lr in other methods.
         """
+
+        self.policy = None
+        self.optimizer = None
+
         # directory for training outputs
         if not os.path.exists(config.output_path):
             os.makedirs(config.output_path)
@@ -51,6 +56,7 @@ class PolicyGradient(object):
         if config.use_baseline:
             self.baseline_network = BaselineNetwork(env, config)
 
+
     def init_policy(self):
         """
         Please do the following:
@@ -70,6 +76,10 @@ class PolicyGradient(object):
         #######################################################
         #########   YOUR CODE HERE - 8-12 lines.   ############
 
+        network = build_mlp(input_size=self.observation_dim, output_size=self.action_dim,
+                            n_layers=self.config.n_layers, size=self.config.layer_size)
+        self.policy = CategoricalPolicy(network) if self.discrete else GaussianPolicy(network, self.action_dim)
+        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.lr)
         #######################################################
         #########          END YOUR CODE.          ############
 
@@ -101,14 +111,14 @@ class PolicyGradient(object):
     def record_summary(self, t):
         pass
 
-    def sample_path(self, env, num_episodes = None):
+    def sample_path(self, env, num_episodes=None):
         """
         Sample paths (trajectories) from the environment.
 
         Args:
             num_episodes: the number of episodes to be sampled
                 if none, sample one batch (size indicated by config file)
-            env: open AI Gym envinronment
+            env: open AI Gym environment
 
         Returns:
             paths: a list of paths. Each path in paths is a dictionary with
@@ -127,7 +137,7 @@ class PolicyGradient(object):
         paths = []
         t = 0
 
-        while (num_episodes or t < self.config.batch_size):
+        while num_episodes or t < self.config.batch_size:
             state = env.reset()
             states, actions, rewards = [], [], []
             episode_reward = 0
@@ -140,15 +150,15 @@ class PolicyGradient(object):
                 rewards.append(reward)
                 episode_reward += reward
                 t += 1
-                if (done or step == self.config.max_ep_len-1):
+                if done or step == self.config.max_ep_len - 1:
                     episode_rewards.append(episode_reward)
                     break
                 if (not num_episodes) and t == self.config.batch_size:
                     break
 
-            path = {"observation" : np.array(states),
-                    "reward" : np.array(rewards),
-                    "action" : np.array(actions)}
+            path = {"observation": np.array(states),
+                    "reward": np.array(rewards),
+                    "action": np.array(actions)}
             paths.append(path)
             episode += 1
             if num_episodes and episode >= num_episodes:
@@ -158,13 +168,13 @@ class PolicyGradient(object):
 
     def get_returns(self, paths):
         """
-        Calculate the returns G_t for each timestep
+        Calculate the returns G_t for each time step
 
         Args:
             paths: recorded sample paths. See sample_path() for details.
 
         Return:
-            returns: return G_t for each timestep
+            returns: return G_t for each time step
 
         After acting in the environment, we record the observations, actions, and
         rewards. To get the advantages that we need for the policy update, we have
@@ -173,21 +183,19 @@ class PolicyGradient(object):
 
            G_t = r_t + γ r_{t+1} + γ^2 r_{t+2} + ... + γ^{T-t} r_T
 
-        where T is the last timestep of the episode.
+        where T is the last time step of the episode.
 
         Note that here we are creating a list of returns for each path
-
-        TODO: compute and return G_t for each timestep. Use self.config.gamma.
         """
 
         all_returns = []
         for path in paths:
             rewards = path["reward"]
             #######################################################
-            #########   YOUR CODE HERE - 5-10 lines.   ############
-
+            returns = copy.copy(rewards)
+            for i in range(1, len(rewards)):
+                returns[-i - 1] = (1 / self.config.gamma) * returns[-i] + returns[-i - 1]
             #######################################################
-            #########          END YOUR CODE.          ############
             all_returns.append(returns)
         returns = np.concatenate(all_returns)
 
@@ -209,10 +217,8 @@ class PolicyGradient(object):
         This function is called only if self.config.normalize_advantage is True.
         """
         #######################################################
-        #########   YOUR CODE HERE - 1-2 lines.    ############
-
+        normalized_advantages = (advantages - advantages.mean()) / advantages.std()
         #######################################################
-        #########          END YOUR CODE.          ############
         return normalized_advantages
 
     def calculate_advantage(self, returns, observations):
@@ -260,10 +266,11 @@ class PolicyGradient(object):
         actions = np2torch(actions)
         advantages = np2torch(advantages)
         #######################################################
-        #########   YOUR CODE HERE - 5-7 lines.    ############
-
+        res = self.policy.action_distribution(observations).log_prob(actions)
+        loss = -(res * advantages).mean()
+        loss.backward()
+        self.optimizer.step()
         #######################################################
-        #########          END YOUR CODE.          ############
 
     def train(self):
         """
@@ -275,8 +282,8 @@ class PolicyGradient(object):
         last_record = 0
 
         self.init_averages()
-        all_total_rewards = []         # the returns of all episodes samples for training purposes
-        averaged_total_rewards = []    # the returns for each iteration
+        all_total_rewards = []  # the returns of all episodes samples for training purposes
+        averaged_total_rewards = []  # the returns for each iteration
 
         for t in range(self.config.num_batches):
 
@@ -309,7 +316,7 @@ class PolicyGradient(object):
             averaged_total_rewards.append(avg_reward)
             self.logger.info(msg)
 
-            if  self.config.record and (last_record > self.config.record_freq):
+            if self.config.record and (last_record > self.config.record_freq):
                 self.logger.info("Recording...")
                 last_record = 0
                 self.record()
@@ -324,7 +331,7 @@ class PolicyGradient(object):
         Not used right now, all evaluation statistics are computed during training
         episodes.
         """
-        if env==None: env = self.env
+        if env == None: env = self.env
         paths, rewards = self.sample_path(env, num_episodes)
         avg_reward = np.mean(rewards)
         sigma_reward = np.sqrt(np.var(rewards) / len(rewards))
