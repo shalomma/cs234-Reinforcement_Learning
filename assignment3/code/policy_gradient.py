@@ -56,7 +56,6 @@ class PolicyGradient(object):
         if config.use_baseline:
             self.baseline_network = BaselineNetwork(env, config)
 
-
     def init_policy(self):
         """
         Please do the following:
@@ -74,14 +73,11 @@ class PolicyGradient(object):
            you can call the parameters() method to get its parameters.
         """
         #######################################################
-        #########   YOUR CODE HERE - 8-12 lines.   ############
-
         network = build_mlp(input_size=self.observation_dim, output_size=self.action_dim,
                             n_layers=self.config.n_layers, size=self.config.layer_size)
         self.policy = CategoricalPolicy(network) if self.discrete else GaussianPolicy(network, self.action_dim)
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.lr)
         #######################################################
-        #########          END YOUR CODE.          ############
 
     def init_averages(self):
         """
