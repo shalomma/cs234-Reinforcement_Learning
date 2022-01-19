@@ -264,6 +264,7 @@ class PolicyGradient(object):
         #######################################################
         res = self.policy.action_distribution(observations).log_prob(actions)
         loss = -(res * advantages).mean()
+        self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         #######################################################
