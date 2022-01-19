@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from network_utils import build_mlp, device, np2torch
 
 
@@ -23,10 +24,10 @@ class BaselineNetwork(nn.Module):
         self.lr = self.config.learning_rate
 
         #######################################################
-        #########   YOUR CODE HERE - 2-8 lines.   #############
-
+        self.baseline = build_mlp(input_size=env.observation_space.shape[0], output_size=1,
+                                  n_layers=self.config.n_layers, size=self.config.layer_size)
+        self.optimizer = torch.optim.Adam(self.baseline.parameters(), lr=self.lr)
         #######################################################
-        #########          END YOUR CODE.          ############
 
     def forward(self, observations):
         """
@@ -47,10 +48,8 @@ class BaselineNetwork(nn.Module):
         directly referencing the network (so that the shape is correct).
         """
         #######################################################
-        #########   YOUR CODE HERE - 1 lines.     #############
-
+        output = self.baseline(observations).flatten()
         #######################################################
-        #########          END YOUR CODE.          ############
         assert output.ndim == 1
         return output
 
@@ -75,10 +74,8 @@ class BaselineNetwork(nn.Module):
         """
         observations = np2torch(observations)
         #######################################################
-        #########   YOUR CODE HERE - 1-4 lines.   ############
-
+        advantages = (np2torch(returns) - self.baseline(observations).flatten()).detach().numpy()
         #######################################################
-        #########          END YOUR CODE.          ############
         return advantages
 
     def update_baseline(self, returns, observations):
@@ -98,7 +95,7 @@ class BaselineNetwork(nn.Module):
         returns = np2torch(returns)
         observations = np2torch(observations)
         #######################################################
-        #########   YOUR CODE HERE - 4-10 lines.  #############
-
+        self.optimizer.zero_grad()
+        F.mse_loss(returns.flatten(), self.baseline(observations).flatten()).backward()
+        self.optimizer.step()
         #######################################################
-        #########          END YOUR CODE.          ############
