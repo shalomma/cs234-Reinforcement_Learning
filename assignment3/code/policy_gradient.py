@@ -190,7 +190,7 @@ class PolicyGradient(object):
             #######################################################
             returns = copy.copy(rewards)
             for i in range(1, len(rewards)):
-                returns[-i - 1] = (1 / self.config.gamma) * returns[-i] + returns[-i - 1]
+                returns[-i - 1] = self.config.gamma * returns[-i] + returns[-i - 1]
             #######################################################
             all_returns.append(returns)
         returns = np.concatenate(all_returns)
