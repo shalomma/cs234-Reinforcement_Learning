@@ -28,6 +28,7 @@ def get_logger(filename):
     Return a logger instance to a file
     """
     logger = logging.getLogger('logger')
+    logging.getLogger('matplotlib.font_manager').disabled = True
     logger.setLevel(logging.DEBUG)
     logging.basicConfig(format='%(message)s', level=logging.DEBUG)
     handler = logging.FileHandler(filename)

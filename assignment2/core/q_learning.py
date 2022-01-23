@@ -200,7 +200,8 @@ class QN(object):
                 t += 1
                 last_eval += 1
                 last_record += 1
-                if self.config.render_train: self.env.render()
+                if self.config.render_train:
+                    self.env.render()
                 # replay memory stuff
                 self.timer.start('replay_buffer.store_encode')
                 idx = replay_buffer.store_frame(state)
@@ -282,7 +283,7 @@ class QN(object):
         self.logger.info("- Training done.")
         self.save()
         scores_eval += [self.evaluate()]
-        # export_plot(scores_eval, "Scores", self.config.plot_output)
+        export_plot(scores_eval, "Scores", self.config.plot_output)
 
     def train_step(self, t, replay_buffer, lr):
         """
